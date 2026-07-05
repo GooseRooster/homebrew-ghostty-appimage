@@ -44,24 +44,9 @@ cask "ghostty-appimage" do
           dst_dir.mkpath
           content = desktop_src.read
                                .gsub(/^TryExec=.*$/, "TryExec=#{app_image_path}")
-                               .gsub(/^Exec=.*$/,    "Exec=#{app_image_path} --gtk-single-instance=true")
+                               .gsub(/^Exec=.*$/,    "Exec=#{app_image_path}")
+                               .gsub(/^DBusActivatable=.*\n?/, "")
           (dst_dir / "com.mitchellh.ghostty.desktop").write(content)
-        end
-
-        # DBus service file — patch Exec= and strip SystemdService= (no
-        # matching systemd unit ships in the AppImage; stripping avoids a
-        # failed systemd activation attempt before DBus falls back to Exec=).
-        # Install to ~/.local/share/dbus-1/services/ so DBusActivatable=true
-        # in the .desktop file works: GNOME sends messages to a running
-        # instance rather than always spawning a new process.
-        dbus_src = squash_root / "share/dbus-1/services/com.mitchellh.ghostty.service"
-        if dbus_src.exist?
-          dbus_dir = Pathname.new(File.expand_path("~/.local/share/dbus-1/services"))
-          dbus_dir.mkpath
-          dbus_content = dbus_src.read
-                                 .gsub(/^Exec=.*$/, "Exec=#{app_image_path} --gtk-single-instance=true --initial-window=false")
-                                 .gsub(/^SystemdService=.*\n?/, "")
-          (dbus_dir / "com.mitchellh.ghostty.service").write(dbus_content)
         end
 
         # Icons — copy every size/HiDPI variant present (16x16, 16x16@2, 32x32,
@@ -110,7 +95,6 @@ cask "ghostty-appimage" do
       FileUtils.rm_f [
         File.expand_path("~/.local/bin/ghostty"),
         File.expand_path("~/.local/share/applications/com.mitchellh.ghostty.desktop"),
-        File.expand_path("~/.local/share/dbus-1/services/com.mitchellh.ghostty.service"),
         File.expand_path("~/.local/share/terminfo/x/xterm-ghostty"),
       ]
       Dir.glob(File.expand_path("~/.local/share/icons/hicolor/*/apps/com.mitchellh.ghostty.png")).each do |icon|
