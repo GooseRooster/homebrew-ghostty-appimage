@@ -1,0 +1,48 @@
+name: Auto-bump ghostty-appimage
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest upstream release
+        id: upstream
+        run: |
+          TAG=$(curl -fsSL \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/pkgforge-dev/ghostty-appimage/releases/latest" \
+            | jq -r '.tag_name')
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Get current cask version
+        id: cask
+        run: |
+          VERSION=$(awk -F'"' '/^  version "/ { print $2; exit }' Casks/ghostty-appimage.rb)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version
+        if: steps.upstream.outputs.version != steps.cask.outputs.version
+        env:
+          VERSION: ${{ steps.upstream.outputs.version }}
+        run: |
+          sed -i "s/^  version \".*\"/  version \"${VERSION}\"/" Casks/ghostty-appimage.rb
+
+      - name: Commit and push
+        if: steps.upstream.outputs.version != steps.cask.outputs.version
+        env:
+          VERSION: ${{ steps.upstream.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/ghostty-appimage.rb
+          git commit -m "chore: bump ghostty-appimage to ${VERSION}"
+          git push

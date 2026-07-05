@@ -72,13 +72,20 @@ icons, or terminfo. No existing official cask uses `postflight` for this
 purpose, making this a novel approach worth raising explicitly in the upstream
 review.
 
-### Desktop entry patching
+### Desktop entry and DBus activation
 
 The upstream AppImage's `.desktop` file contains absolute CI build paths in
 `Exec=` and `TryExec=`. The postflight patches these to the installed symlink
-path. `DBusActivatable=true` is stripped because the AppImage ships no D-Bus
-service file; leaving it causes GNOME to attempt (and silently fail) D-Bus
-activation instead of using `Exec=`.
+path and leaves `DBusActivatable=true` intact.
+
+The AppImage ships a D-Bus service file at
+`share/dbus-1/services/com.mitchellh.ghostty.service`. The postflight patches
+its `Exec=` line and strips `SystemdService=` (no matching systemd unit ships
+in the AppImage; stripping avoids a failed systemd activation before the D-Bus
+daemon falls back to `Exec=`). The patched file is installed to
+`~/.local/share/dbus-1/services/` so that D-Bus activation works: GNOME can
+send messages to an already-running Ghostty instance rather than always
+spawning a new process.
 
 ### Version string (no comma)
 
