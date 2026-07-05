@@ -83,24 +83,23 @@ cask "ghostty-appimage" do
       end
     end
 
-    # Postflight-written files are not tracked by Homebrew; list them explicitly
-    # so `brew uninstall` removes them. Paths that don't exist are skipped harmlessly.
-    uninstall delete: [
-      "#{Dir.home}/.local/share/applications/com.mitchellh.ghostty.desktop",
-      "#{Dir.home}/.local/share/terminfo/x/xterm-ghostty",
-      "#{Dir.home}/.local/share/icons/hicolor/16x16/apps/com.mitchellh.ghostty.png",
-      "#{Dir.home}/.local/share/icons/hicolor/16x16@2/apps/com.mitchellh.ghostty.png",
-      "#{Dir.home}/.local/share/icons/hicolor/32x32/apps/com.mitchellh.ghostty.png",
-      "#{Dir.home}/.local/share/icons/hicolor/32x32@2/apps/com.mitchellh.ghostty.png",
-      "#{Dir.home}/.local/share/icons/hicolor/128x128/apps/com.mitchellh.ghostty.png",
-      "#{Dir.home}/.local/share/icons/hicolor/128x128@2/apps/com.mitchellh.ghostty.png",
-      "#{Dir.home}/.local/share/icons/hicolor/256x256/apps/com.mitchellh.ghostty.png",
-      "#{Dir.home}/.local/share/icons/hicolor/256x256@2/apps/com.mitchellh.ghostty.png",
-      "#{Dir.home}/.local/share/icons/hicolor/512x512/apps/com.mitchellh.ghostty.png",
-      "#{Dir.home}/.local/share/icons/hicolor/1024x1024/apps/com.mitchellh.ghostty.png",
-    ]
-
+    # Homebrew's `delete:` always invokes sudo, which blocks non-interactive
+    # uninstall for user-owned XDG paths. Per Homebrew convention, user-level
+    # integration files go in `zap trash:` — run `brew uninstall --zap` to
+    # remove the desktop entry, icons, terminfo, and user config/cache.
     zap trash: [
+      "~/.local/share/applications/com.mitchellh.ghostty.desktop",
+      "~/.local/share/terminfo/x/xterm-ghostty",
+      "~/.local/share/icons/hicolor/16x16/apps/com.mitchellh.ghostty.png",
+      "~/.local/share/icons/hicolor/16x16@2/apps/com.mitchellh.ghostty.png",
+      "~/.local/share/icons/hicolor/32x32/apps/com.mitchellh.ghostty.png",
+      "~/.local/share/icons/hicolor/32x32@2/apps/com.mitchellh.ghostty.png",
+      "~/.local/share/icons/hicolor/128x128/apps/com.mitchellh.ghostty.png",
+      "~/.local/share/icons/hicolor/128x128@2/apps/com.mitchellh.ghostty.png",
+      "~/.local/share/icons/hicolor/256x256/apps/com.mitchellh.ghostty.png",
+      "~/.local/share/icons/hicolor/256x256@2/apps/com.mitchellh.ghostty.png",
+      "~/.local/share/icons/hicolor/512x512/apps/com.mitchellh.ghostty.png",
+      "~/.local/share/icons/hicolor/1024x1024/apps/com.mitchellh.ghostty.png",
       "~/.config/ghostty",
       "~/.cache/ghostty",
     ]
@@ -113,6 +112,9 @@ cask "ghostty-appimage" do
 
       Ghostty's terminfo entry has been installed to ~/.local/share/terminfo/.
       If remote hosts don't recognise xterm-ghostty, set TERM=xterm-256color before SSH.
+
+      To also remove the desktop entry, icons, and terminfo on uninstall:
+        brew uninstall --zap gooze/ghostty-appimage/ghostty-appimage
     EOS
   end
 end
