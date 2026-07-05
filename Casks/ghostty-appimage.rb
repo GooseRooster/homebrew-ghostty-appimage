@@ -38,9 +38,6 @@ cask "ghostty-appimage" do
 
         # .desktop — patch TryExec= and both Exec= lines (main section +
         # [Desktop Action new-window]) which embed the CI build path.
-        # Strip DBusActivatable: GNOME tries D-Bus activation first when it's
-        # set, and the AppImage ships no .service file, so the launch fails
-        # silently without ever reaching Exec=.
         desktop_src = squash_root / "share/applications/com.mitchellh.ghostty.desktop"
         if desktop_src.exist?
           dst_dir = Pathname.new(File.expand_path("~/.local/share/applications"))
@@ -75,16 +72,14 @@ cask "ghostty-appimage" do
           FileUtils.cp(terminfo_src, terminfo_dst / "xterm-ghostty")
         end
 
-        # ~/.local/bin is in the GNOME session PATH on Fedora/Bluefin (via
-        # systemd user environment), so a symlink here makes `ghostty` resolve
-        # by name in GNOME keyboard shortcuts — same UX as a native install.
+        # Add to PATH
         local_bin = Pathname.new(File.expand_path("~/.local/bin"))
         local_bin.mkpath
         ghostty_bin = local_bin / "ghostty"
         ghostty_bin.unlink if ghostty_bin.symlink?
         File.symlink(app_image_path, ghostty_bin)
 
-        # Refresh GNOME / XDG app grid
+        # Refresh XDG app grid
         update_cmd = %w[/usr/bin/update-desktop-database /usr/local/bin/update-desktop-database]
                      .find { |p| File.executable?(p) }
         if update_cmd
@@ -126,8 +121,7 @@ cask "ghostty-appimage" do
       This is an UNOFFICIAL Linux AppImage build (pkgforge-dev/ghostty-appimage),
       not the official Ghostty distribution.
 
-      A `ghostty` symlink has been added to ~/.local/bin/ for use in GNOME
-      keyboard shortcuts and terminals that don't inherit Homebrew's PATH.
+      A `ghostty` symlink has been added to ~/.local/bin 
 
       Ghostty's terminfo entry has been installed to ~/.local/share/terminfo/.
       If remote hosts don't recognise xterm-ghostty, set TERM=xterm-256color before SSH.
