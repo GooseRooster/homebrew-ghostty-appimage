@@ -75,6 +75,15 @@ cask "ghostty-appimage" do
           FileUtils.cp(terminfo_src, terminfo_dst / "xterm-ghostty")
         end
 
+        # ~/.local/bin is in the GNOME session PATH on Fedora/Bluefin (via
+        # systemd user environment), so a symlink here makes `ghostty` resolve
+        # by name in GNOME keyboard shortcuts — same UX as a native install.
+        local_bin = Pathname.new(File.expand_path("~/.local/bin"))
+        local_bin.mkpath
+        ghostty_bin = local_bin / "ghostty"
+        ghostty_bin.unlink if ghostty_bin.symlink?
+        File.symlink(app_image_path, ghostty_bin)
+
         # Refresh GNOME / XDG app grid
         update_cmd = %w[/usr/bin/update-desktop-database /usr/local/bin/update-desktop-database]
                      .find { |p| File.executable?(p) }
@@ -87,23 +96,26 @@ cask "ghostty-appimage" do
       end
     end
 
-    # Homebrew's `delete:` always invokes sudo, which blocks non-interactive
-    # uninstall for user-owned XDG paths. Per Homebrew convention, user-level
-    # integration files go in `zap trash:` — run `brew uninstall --zap` to
-    # remove the desktop entry, icons, terminfo, and user config/cache.
+    # Runs without sudo (uninstall script: defaults to sudo: false), so it can
+    # cleanly remove user-owned XDG files on standard `brew uninstall`.
+    uninstall script: {
+      executable: "/bin/sh",
+      args:       [
+        "-c",
+        'rm -f ' \
+        '"$HOME/.local/bin/ghostty" ' \
+        '"$HOME/.local/share/applications/com.mitchellh.ghostty.desktop" ' \
+        '"$HOME/.local/share/terminfo/x/xterm-ghostty"; ' \
+        'find "$HOME/.local/share/icons/hicolor" -name "com.mitchellh.ghostty.png" ' \
+        '  -delete 2>/dev/null; ' \
+        'command -v update-desktop-database >/dev/null 2>&1 && ' \
+        '  update-desktop-database "$HOME/.local/share/applications" 2>/dev/null; ' \
+        'true',
+      ],
+    }
+
+    # zap removes user config and cache (destructive — data loss; intentional)
     zap trash: [
-      "~/.local/share/applications/com.mitchellh.ghostty.desktop",
-      "~/.local/share/terminfo/x/xterm-ghostty",
-      "~/.local/share/icons/hicolor/16x16/apps/com.mitchellh.ghostty.png",
-      "~/.local/share/icons/hicolor/16x16@2/apps/com.mitchellh.ghostty.png",
-      "~/.local/share/icons/hicolor/32x32/apps/com.mitchellh.ghostty.png",
-      "~/.local/share/icons/hicolor/32x32@2/apps/com.mitchellh.ghostty.png",
-      "~/.local/share/icons/hicolor/128x128/apps/com.mitchellh.ghostty.png",
-      "~/.local/share/icons/hicolor/128x128@2/apps/com.mitchellh.ghostty.png",
-      "~/.local/share/icons/hicolor/256x256/apps/com.mitchellh.ghostty.png",
-      "~/.local/share/icons/hicolor/256x256@2/apps/com.mitchellh.ghostty.png",
-      "~/.local/share/icons/hicolor/512x512/apps/com.mitchellh.ghostty.png",
-      "~/.local/share/icons/hicolor/1024x1024/apps/com.mitchellh.ghostty.png",
       "~/.config/ghostty",
       "~/.cache/ghostty",
     ]
@@ -114,10 +126,13 @@ cask "ghostty-appimage" do
       This is an UNOFFICIAL Linux AppImage build (pkgforge-dev/ghostty-appimage),
       not the official Ghostty distribution.
 
+      A `ghostty` symlink has been added to ~/.local/bin/ for use in GNOME
+      keyboard shortcuts and terminals that don't inherit Homebrew's PATH.
+
       Ghostty's terminfo entry has been installed to ~/.local/share/terminfo/.
       If remote hosts don't recognise xterm-ghostty, set TERM=xterm-256color before SSH.
 
-      To also remove the desktop entry, icons, and terminfo on uninstall:
+      To also remove Ghostty config and cache on uninstall:
         brew uninstall --zap gooze/ghostty-appimage/ghostty-appimage
     EOS
   end
