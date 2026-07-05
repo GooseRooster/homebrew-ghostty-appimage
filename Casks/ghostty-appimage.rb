@@ -91,23 +91,19 @@ cask "ghostty-appimage" do
       end
     end
 
-    # Runs without sudo (uninstall script: defaults to sudo: false), so it can
-    # cleanly remove user-owned XDG files on standard `brew uninstall`.
-    uninstall script: {
-      executable: "/bin/sh",
-      args:       [
-        "-c",
-        'rm -f ' \
-        '"$HOME/.local/bin/ghostty" ' \
-        '"$HOME/.local/share/applications/com.mitchellh.ghostty.desktop" ' \
-        '"$HOME/.local/share/terminfo/x/xterm-ghostty"; ' \
-        'find "$HOME/.local/share/icons/hicolor" -name "com.mitchellh.ghostty.png" ' \
-        '  -delete 2>/dev/null; ' \
-        'command -v update-desktop-database >/dev/null 2>&1 && ' \
-        '  update-desktop-database "$HOME/.local/share/applications" 2>/dev/null; ' \
-        'true',
-      ],
-    }
+    uninstall_postflight do
+      FileUtils.rm_f [
+        File.expand_path("~/.local/bin/ghostty"),
+        File.expand_path("~/.local/share/applications/com.mitchellh.ghostty.desktop"),
+        File.expand_path("~/.local/share/terminfo/x/xterm-ghostty"),
+      ]
+      Dir.glob(File.expand_path("~/.local/share/icons/hicolor/*/apps/com.mitchellh.ghostty.png")).each do |icon|
+        FileUtils.rm_f icon
+      end
+      update_cmd = %w[/usr/bin/update-desktop-database /usr/local/bin/update-desktop-database]
+                   .find { |p| File.executable?(p) }
+      system_command update_cmd, args: [File.expand_path("~/.local/share/applications")] if update_cmd
+    end
 
     # zap removes user config and cache (destructive — data loss; intentional)
     zap trash: [

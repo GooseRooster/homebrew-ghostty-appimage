@@ -1,6 +1,6 @@
 # homebrew-ghostty-appimage
 
-A personal Homebrew tap providing `ghostty-appimage`, a Linux cask for the
+An unofficial Homebrew tap providing `ghostty-appimage`, a Linux cask for the
 unofficial [Ghostty AppImage](https://github.com/pkgforge-dev/ghostty-appimage)
 built by pkgforge-dev.
 
@@ -94,7 +94,8 @@ interpolation.
 ### Uninstall without sudo
 
 `uninstall delete:` in Homebrew always invokes `sudo`, which fails
-non-interactively for user-owned XDG paths. `uninstall script:` defaults to
-`sudo: false` and is used instead to remove the desktop entry, icons, terminfo,
-and PATH symlink on standard `brew uninstall`. User config and cache are left
-to `zap trash:`.
+non-interactively for user-owned XDG paths. `uninstall_postflight` (a proper
+Homebrew DSL block, same base class as `postflight`) is used instead — it runs
+Ruby directly after the uninstall phase, with no sudo requirement, and cleanly
+removes the desktop entry, icons, terminfo, and PATH symlink. User config and
+cache are left to `zap trash:`.
