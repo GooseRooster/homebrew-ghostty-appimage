@@ -45,6 +45,7 @@ cask "ghostty-appimage" do
           content = desktop_src.read
                                .gsub(/^TryExec=.*$/, "TryExec=#{app_image_path}")
                                .gsub(/^Exec=.*$/,    "Exec=#{app_image_path} --gtk-single-instance=true")
+                               .gsub(/^DBusActivatable=.*\n?/, "")
           (dst_dir / "com.mitchellh.ghostty.desktop").write(content)
         end
 
