@@ -1,12 +1,14 @@
 cask "ghostty-appimage" do
   arch arm: "aarch64", intel: "x86_64"
 
-  # version.csv.first  = bare semver for filename  ("1.3.1")
-  # version.csv.second = full tag for download path ("v1.3.1" or "v1.2.0+1" on re-releases)
-  version "1.3.1,v1.3.1"
+  # Plain semver — no comma separator. Commas in the Caskroom directory path
+  # break AppImage's FUSE mount (FUSE parses commas as option separators).
+  # For re-releases tagged v1.2.0+1, version is "1.2.0+1"; the filename strips
+  # the +N suffix via .split("+").first since asset names don't include it.
+  version "1.3.1"
   sha256 :no_check
 
-  url "https://github.com/pkgforge-dev/ghostty-appimage/releases/download/#{version.csv.second}/Ghostty-#{version.csv.first}-#{arch}.AppImage",
+  url "https://github.com/pkgforge-dev/ghostty-appimage/releases/download/v#{version}/Ghostty-#{version.to_s.split("+").first}-#{arch}.AppImage",
       verified: "github.com/pkgforge-dev/ghostty-appimage/"
   name "Ghostty"
   desc "Fast, native, feature-rich terminal emulator (unofficial Linux AppImage build)"
@@ -15,14 +17,12 @@ cask "ghostty-appimage" do
   livecheck do
     url "https://github.com/pkgforge-dev/ghostty-appimage"
     strategy :github_latest do |json, _regex|
-      tag = json["tag_name"]                         # "v1.3.1" or "v1.2.0+1"
-      ver = tag.sub(/\Av/, "").sub(/\+\d+\z/, "")    # "1.3.1"  or "1.2.0"
-      "#{ver},#{tag}"                                # "1.3.1,v1.3.1" or "1.2.0,v1.2.0+1"
+      json["tag_name"]&.sub(/\Av/, "")  # "v1.3.1" → "1.3.1", "v1.2.0+1" → "1.2.0+1"
     end
   end
 
   on_linux do
-    app_image "Ghostty-#{version.csv.first}-#{arch}.AppImage", target: "Ghostty.AppImage"
+    app_image "Ghostty-#{version.to_s.split("+").first}-#{arch}.AppImage", target: "Ghostty.AppImage"
 
     postflight do
       require "tmpdir"
@@ -37,7 +37,10 @@ cask "ghostty-appimage" do
                        chdir: extract_dir
 
         # .desktop — patch TryExec= and both Exec= lines (main section +
-        # [Desktop Action new-window]) which contain the CI build path
+        # [Desktop Action new-window]) which embed the CI build path.
+        # Strip DBusActivatable: GNOME tries D-Bus activation first when it's
+        # set, and the AppImage ships no .service file, so the launch fails
+        # silently without ever reaching Exec=.
         desktop_src = squash_root / "share/applications/com.mitchellh.ghostty.desktop"
         if desktop_src.exist?
           dst_dir = Pathname.new(File.expand_path("~/.local/share/applications"))
