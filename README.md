@@ -4,9 +4,6 @@ An unofficial Homebrew tap providing `ghostty-appimage`, a Linux cask for the
 unofficial [Ghostty AppImage](https://github.com/pkgforge-dev/ghostty-appimage)
 built by pkgforge-dev.
 
-> **This is a testing ground** for an eventual PR against the official
-> [`Homebrew/homebrew-cask`](https://github.com/Homebrew/homebrew-cask)
-> `ghostty` cask, adding Linux AppImage support via an `on_linux do` block.
 
 ---
 
@@ -14,6 +11,7 @@ built by pkgforge-dev.
 
 ```sh
 brew tap gooserooster/ghostty-appimage
+brew trust gooserooster/ghostty-appimage
 brew install --cask ghostty-appimage
 ```
 
@@ -27,9 +25,6 @@ brew install --cask ghostty-appimage
 | Terminfo | `~/.local/share/terminfo/x/xterm-ghostty` |
 | PATH symlink | `~/.local/bin/ghostty` → `~/Applications/Ghostty.AppImage` |
 
-The `~/.local/bin/ghostty` symlink lets you use `ghostty` by name in GNOME
-keyboard shortcuts (Settings → Keyboard → Custom Shortcuts) and in terminals
-whose PATH doesn't include Homebrew's bin directory.
 
 ## Uninstall
 
@@ -54,23 +49,17 @@ Livecheck tracks the upstream GitHub releases feed and skips the `tip`
 
 ## Design notes
 
-These are recorded here for the upstream PR discussion.
 
 ### Why a separate cask token?
 
 This tap uses `ghostty-appimage` rather than `ghostty` so it can coexist
-with the official `homebrew-cask` `ghostty` cask (macOS `.dmg`). The upstream
-PR intent is to merge the Linux side into the existing `ghostty.rb` as an
-`on_linux do` block, following the pattern of the `cursor` and
-`beekeeper-studio` casks.
+with the official `homebrew-cask` `ghostty` cask (macOS `.dmg`). 
 
 ### Why `postflight` for desktop integration?
 
 Homebrew's `app_image` artifact (`appimage.rb`) only symlinks the AppImage
 into `~/Applications/` and sets `+x` — it does not touch `.desktop` files,
-icons, or terminfo. No existing official cask uses `postflight` for this
-purpose, making this a novel approach worth raising explicitly in the upstream
-review.
+icons, or terminfo. 
 
 ### Desktop entry and DBus activation
 
@@ -87,22 +76,4 @@ daemon falls back to `Exec=`). The patched file is installed to
 send messages to an already-running Ghostty instance rather than always
 spawning a new process.
 
-### Version string (no comma)
 
-An earlier iteration used a two-part CSV version (`"1.3.1,v1.3.1"`) to
-separate the filename semver from the download tag. This was dropped because
-Homebrew places the version string in the Caskroom directory path, and commas
-in that path break AppImage's FUSE mount — FUSE parses commas as option
-separators. The current approach uses a plain semver version and handles the
-`+N` re-release edge case (where tag `v1.2.0+1` maps to filename
-`Ghostty-1.2.0-*.AppImage`) via `version.to_s.split("+").first` in the URL
-interpolation.
-
-### Uninstall without sudo
-
-`uninstall delete:` in Homebrew always invokes `sudo`, which fails
-non-interactively for user-owned XDG paths. `uninstall_postflight` (a proper
-Homebrew DSL block, same base class as `postflight`) is used instead — it runs
-Ruby directly after the uninstall phase, with no sudo requirement, and cleanly
-removes the desktop entry, icons, terminfo, and PATH symlink. User config and
-cache are left to `zap trash:`.
