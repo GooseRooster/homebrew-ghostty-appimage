@@ -26,6 +26,35 @@ brew install --cask ghostty-appimage
 | PATH symlink | `~/.local/bin/ghostty` → `~/Applications/Ghostty.AppImage` |
 
 
+## Known limitation: terminfo under `sudo`
+
+Running a `sudo`'d command (e.g. `sudo systemctl status ...`) from a Ghostty
+terminal can print:
+
+```
+'xterm-ghostty': unknown terminal type.
+```
+
+The terminfo entry above installs to `~/.local/share/terminfo` (user-scoped
+ncurses search path) — correct for a normal shell, but on distros whose
+`sudoers` sets `Defaults always_set_home` (Fedora/RHEL-family, including
+Fedora Atomic/Bluefin), `sudo` unconditionally resets `$HOME` to root's home,
+so ncurses under `sudo` can't find it and falls back to the compiled-in
+terminal database, which doesn't include `xterm-ghostty`.
+
+Workaround: mirror the compiled entry into `/etc/terminfo`, which is in
+ncurses' default search path regardless of `$HOME`:
+
+```sh
+sudo mkdir -p /etc/terminfo/x
+sudo cp ~/.local/share/terminfo/x/xterm-ghostty /etc/terminfo/x/xterm-ghostty
+```
+
+Or work around it per-invocation: `sudo env TERM=xterm-256color <command>`.
+
+This isn't something the cask itself can fix (it only has access to the
+invoking user's `$HOME`, not root's) 
+
 ## Uninstall
 
 ```sh
